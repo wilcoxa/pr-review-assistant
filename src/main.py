@@ -11,7 +11,7 @@ from .github_client import (
     files_for_review,
     fetch_contextual_info,
     get_file_content,
-    safe_create_review,
+    build_summary_review_body,
 )
 from .llm.base import LLMConfig
 from .prompt.builder import build_prompt
@@ -194,7 +194,9 @@ def main():
         review_body = format_review_body(
             len(comments), tools_used, total_findings, config.review_persona,
         )
-        safe_create_review(pull, review_body, comments)
+        body = build_summary_review_body(review_body, comments)
+        pull.create_review(body=body, event="COMMENT")
+        logger.info(f"Posted consolidated review for {len(comments)} file(s)")
     else:
         logger.info("No review comments to post")
 
