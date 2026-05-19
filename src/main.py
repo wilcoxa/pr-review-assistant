@@ -14,7 +14,7 @@ from .github_client import (
     build_summary_review_body,
 )
 from .llm.base import LLMConfig
-from .prompt.builder import build_prompt
+from .prompt.builder import build_prompt, build_summary_prompt
 from .review.formatter import format_review_comment, format_review_body
 from .tools.base import format_findings_for_prompt
 from .tools.registry import get_tools_for_config
@@ -173,12 +173,23 @@ def main():
         comments.append({
             "path": quote(filename, safe="/"),
             "position": 1,
-            "body": format_review_comment(filename, llm_review),
+            "body": format_review_comment(llm_review),
         })
 
     if comments:
+        from urllib.parse import unquote
+        summary = None
+        file_reviews = [(unquote(c["path"]), c["body"]) for c in comments]
+        summary_prompt = build_summary_prompt(pr_description, file_reviews, config, llm)
+        try:
+            summary = llm.complete(summary_prompt.system_message, summary_prompt.user_message, llm_config)
+            logger.info("Generated overall PR summary")
+        except Exception as e:
+            logger.warning(f"Summary generation failed: {e}")
+
         review_body = format_review_body(
             len(comments), tools_used, total_findings, config.review_persona,
+            summary=summary,
             quality_observations=quality_observations,
             test_observations=test_observations,
             hygiene_observations=hygiene_observations,

@@ -96,6 +96,32 @@ def build_user_message(
     return "\n\n".join(parts)
 
 
+def build_summary_prompt(
+    pr_description: str,
+    file_reviews: list[tuple[str, str]],
+    config: Config,
+    llm: LLMProvider,
+) -> PromptParts:
+    """Build the prompt for the post-review PR summary synthesis call."""
+    system_msg = (
+        "You are a senior code reviewer synthesising a set of per-file code reviews "
+        "into a single concise overall PR assessment. Cover: what the PR achieves, "
+        "general code quality signal, any cross-cutting concerns or patterns found "
+        "across files, and the highest-priority issues. Be direct and brief — "
+        "3 to 5 bullet points or a short paragraph. Do not repeat file-level detail."
+    )
+
+    parts = [f"## PR Description\n{pr_description}"]
+    parts.append("## Per-File Reviews")
+    for filename, review in file_reviews:
+        parts.append(f"### `{filename}`\n{review}")
+    parts.append("Synthesise the above into a concise overall PR assessment.")
+
+    user_msg = "\n\n".join(parts)
+    total = llm.count_tokens(system_msg) + llm.count_tokens(user_msg)
+    return PromptParts(system_message=system_msg, user_message=user_msg, total_tokens=total)
+
+
 def build_prompt(
     filename: str,
     contents: str,
@@ -140,8 +166,9 @@ def _build_instructions(config: Config) -> str:
     parts = [
         "## Review Instructions",
         "Focus your review strictly on the specific file shown above. "
-        "Do not include a PR-level overview or general summary — "
-        "address only what is present in this file.",
+        "Do not include a PR-level overview or general summary — address only what is "
+        "present in this file. Be concise: report the most important findings only, "
+        "aim for 3 to 5 items maximum. Omit padding and minor stylistic observations.",
         STANDARDIZED_CHECKLIST,
     ]
 

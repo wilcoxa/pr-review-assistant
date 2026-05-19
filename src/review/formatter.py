@@ -5,9 +5,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def format_review_comment(filename: str, llm_review: str) -> str:
+def format_review_comment(llm_review: str) -> str:
     """Format a review comment for a single file - file-specific content only."""
-    return f"### Review for `{filename}`\n\n{llm_review}"
+    return llm_review
 
 
 def format_review_body(
@@ -15,11 +15,12 @@ def format_review_body(
     tools_used: list[str],
     total_findings: int,
     persona: str,
+    summary: str | None = None,
     quality_observations: list[str] | None = None,
     test_observations: list[str] | None = None,
     hygiene_observations: list[str] | None = None,
 ) -> str:
-    """Format the top-level review body including PR-level observations."""
+    """Format the top-level review body including overall summary and PR-level observations."""
     parts = ["**Automated Code Review**\n"]
     parts.append(f"Reviewed **{file_count}** file(s)")
     if tools_used:
@@ -28,6 +29,9 @@ def format_review_body(
         parts.append(f" | {total_findings} static analysis finding(s)")
     parts.append(f" | Mode: {persona}")
     body = "".join(parts)
+
+    if summary:
+        body += f"\n\n{summary}"
 
     if quality_observations:
         body += "\n\n#### PR Quality Notes\n"
