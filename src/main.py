@@ -11,7 +11,7 @@ from .github_client import (
     files_for_review,
     fetch_contextual_info,
     get_file_content,
-    build_summary_review_body,
+    safe_create_review,
 )
 from .llm.base import LLMConfig
 from .prompt.builder import build_prompt
@@ -144,7 +144,6 @@ def main():
 
     # Review each file
     comments = []
-    first_file = True
 
     for filename, commit_info in files.items():
         commit_sha = commit_info["sha"]
@@ -171,32 +170,20 @@ def main():
             logger.error(f"LLM review failed for {filename}: {e}")
             continue
 
-        # Format comment
-        body = format_review_comment(
-            filename,
-            llm_review,
-            tool_summary=file_findings if file_findings else None,
-            quality_observations=quality_observations if first_file else None,
-            test_observations=test_observations if first_file else None,
-            hygiene_observations=hygiene_observations if first_file else None,
-        )
-        first_file = False
-
         comments.append({
             "path": quote(filename, safe="/"),
             "position": 1,
-            "body": body,
+            "body": format_review_comment(filename, llm_review),
         })
 
-    # Post review (with fallback to a summary review if GitHub rejects the
-    # inline comments — e.g. unresolvable paths or rate-limited submissions).
     if comments:
         review_body = format_review_body(
             len(comments), tools_used, total_findings, config.review_persona,
+            quality_observations=quality_observations,
+            test_observations=test_observations,
+            hygiene_observations=hygiene_observations,
         )
-        body = build_summary_review_body(review_body, comments)
-        pull.create_review(body=body, event="COMMENT")
-        logger.info(f"Posted consolidated review for {len(comments)} file(s)")
+        safe_create_review(pull, review_body, comments)
     else:
         logger.info("No review comments to post")
 

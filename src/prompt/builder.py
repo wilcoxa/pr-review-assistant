@@ -145,6 +145,13 @@ def _build_instructions(config: Config) -> str:
         if emphasis_lines:
             parts.append("### Focus Emphasis\n" + "\n".join(f"- {line}" for line in emphasis_lines))
 
+    if config.severity_threshold.lower() not in ("low", ""):
+        parts.append(
+            f"### Severity Filter\n"
+            f"Only report issues at **{config.severity_threshold}** severity or above. "
+            f"Do not include low-severity or informational observations in your feedback."
+        )
+
     if config.custom_instructions:
         parts.append(f"### Additional Instructions\n{config.custom_instructions}")
 
