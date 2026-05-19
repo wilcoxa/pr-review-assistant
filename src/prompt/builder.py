@@ -137,7 +137,13 @@ def _build_context(pr_description: str, comments: list[str], readme: str) -> str
 
 def _build_instructions(config: Config) -> str:
     """Build review instructions: standardized checklist + optional focus emphasis + custom notes."""
-    parts = ["## Review Instructions", STANDARDIZED_CHECKLIST]
+    parts = [
+        "## Review Instructions",
+        "Focus your review strictly on the specific file shown above. "
+        "Do not include a PR-level overview or general summary — "
+        "address only what is present in this file.",
+        STANDARDIZED_CHECKLIST,
+    ]
 
     selected = set(config.focus_areas)
     if selected and selected != ALL_FOCUS_AREAS:
